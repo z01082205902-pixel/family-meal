@@ -123,9 +123,13 @@ function alternatives_(C, ctx) {
   var E = C.E, byId = E.byId;
   var used = {};
   if (C.plan.bridge) C.plan.bridge.days.forEach(function (x) { used[x.main] = 1; });
+  if (ctx.charAt(0) === 'b' && C.plan.weeks[C.plan.start]) C.plan.weeks[C.plan.start].mains.forEach(function (id) { used[id] = 1; });
   if (ctx.charAt(0) !== 'b') C.plan.weeks[+ctx.split('.')[0]].mains.forEach(function (id) { used[id] = 1; });
   var st = { pool: A.av, invLeft: {}, buys: {}, fromInv: {} };
-  var cands = E.MAINS.filter(function (d) { return !used[d.id] && feasible_(C, d, A.av, A.F); })
+  var NOOD2 = ['kalguksu', 'myeongran', 'janchi', 'bibimguksu', 'tteokbokki'];
+  var curNood = (function () { var id = curName_(C, ctx); return null; })();
+  var hasN = Object.keys(used).some(function (id) { return NOOD2.indexOf(id) >= 0 && E.byId[id].name !== curName_(C, ctx); });
+  var cands = E.MAINS.filter(function (d) { return !used[d.id] && !(hasN && NOOD2.indexOf(d.id) >= 0) && feasible_(C, d, A.av, A.F); })
     .map(function (d) { return { d: d, s: E.score(d, st) }; }).sort(function (a, b) { return b.s - a.s; }).slice(0, 3);
   var opts = cands.map(function (c) {
     var rest = {}; for (var k in A.av) rest[k] = A.av[k];
@@ -144,6 +148,54 @@ function alternatives_(C, ctx) {
   return opts;
 }
 
+function curName_(C, ctx) {
+  if (ctx.charAt(0) === 'b') return C.E.byId[C.plan.bridge.days.filter(function (x) { return x.date === ctx.slice(1); })[0].main].name;
+  var p = ctx.split('.'), rec = C.plan.weeks[+p[0]];
+  var x = C.E.days(rec, C.plan.settings.outday).filter(function (y) { return y.d === +p[1]; })[0];
+  return x && !x.out ? C.E.byId[rec.mains[x.slot]].name : null;
+}
+// 바꾸기 전에 먼저 묻기: 이미 산 재료로? 장을 더 봐도 되는 다른 메뉴?
+function askMode_(C, ctx) {
+  if (!ctx) { tg_('sendMessage', { chat_id: C.chat, text: '그날은 아직 식단이 없어요.' }); return; }
+  var nm = curName_(C, ctx);
+  if (!nm) { tg_('sendMessage', { chat_id: C.chat, text: '그날은 외식·배달 데이예요. 먹고 싶은 거 드세요!' }); return; }
+  tg_('sendMessage', { chat_id: C.chat, parse_mode: 'HTML', text: '「' + nm + '」 대신 뭘로 바꿀까요?',
+    reply_markup: { inline_keyboard: [[{ text: '이미 산 재료로 만들 수 있는 메뉴', callback_data: 'am|' + ctx }], [{ text: '장을 조금 더 봐도 되니 다른 메뉴', callback_data: 'an|' + ctx }], [{ text: '그냥 원래대로 먹을게요', callback_data: 'x|' }]] } });
+}
+// 장을 더 봐야 하는 다른 메뉴: 추가로 살 게 적은 순
+function missing_(C, item, av, F) {
+  var out = [];
+  for (var k in item.ing) { if (C.E.ING[k][2] === '냉장 상비') continue; if ((av[k] || 0) < item.ing[k] * F * 0.75 - 1e-9) out.push(k); }
+  return out;
+}
+function proposeNew_(C, ctx) {
+  var A = avail_(C, ctx); if (!A) { tg_('sendMessage', { chat_id: C.chat, text: '그날은 외식·배달 데이예요.' }); return; }
+  var E = C.E, used = {};
+  if (C.plan.bridge) C.plan.bridge.days.forEach(function (x) { used[x.main] = 1; });
+  if (ctx.charAt(0) === 'b' && C.plan.weeks[C.plan.start]) C.plan.weeks[C.plan.start].mains.forEach(function (id) { used[id] = 1; });
+  if (ctx.charAt(0) !== 'b') C.plan.weeks[+ctx.split('.')[0]].mains.forEach(function (id) { used[id] = 1; });
+  var st = { pool: A.av, invLeft: {}, buys: {}, fromInv: {} };
+  var FAM = { chadol: '된장', doenjang: '된장', kimchijjigae: '김치', chamchikimchi: '김치', budae: '김치', kimchibap: '김치', dakbokkeum: '닭', jjimdak: '닭', dakgalbi: '닭', teriyaki: '닭', godeungeo: '고등어', godeungeojorim: '고등어', janchi: '국수', bibimguksu: '국수' };
+  var curId = null; if (ctx.charAt(0) === 'b') curId = C.plan.bridge.days.filter(function (x) { return x.date === ctx.slice(1); })[0].main; else { var pp = ctx.split('.'), rr = C.plan.weeks[+pp[0]]; var xx = E.days(rr, C.plan.settings.outday).filter(function (y) { return y.d === +pp[1]; })[0]; curId = rr.mains[xx.slot]; }
+  var cur = E.byId[curId];
+  var NOOD = ['kalguksu', 'myeongran', 'janchi', 'bibimguksu', 'tteokbokki'];
+  var hasNoodle = Object.keys(used).some(function (id) { return NOOD.indexOf(id) >= 0 && id !== cur.id; });
+  var list = E.MAINS.filter(function (d) { return !used[d.id] && !(hasNoodle && NOOD.indexOf(d.id) >= 0) && d.protein !== cur.protein && !(FAM[d.id] && FAM[d.id] === FAM[cur.id]); }).map(function (d) { var miss = missing_(C, d, A.av, A.F); return { d: d, miss: miss, s: E.score(d, st) }; })
+    .filter(function (x) { return x.miss.length > 0; })
+    .sort(function (a, b) { return (a.miss.length - b.miss.length) || (b.s - a.s); });
+  var pick = [], prots = {};
+  list.forEach(function (x) { if (pick.length < 4 && !prots[x.d.protein]) { pick.push(x); prots[x.d.protein] = 1; } });
+  list.forEach(function (x) { if (pick.length < 4 && pick.indexOf(x) < 0) pick.push(x); });
+  if (!pick.length) { tg_('sendMessage', { chat_id: C.chat, text: '바꿀 메뉴를 못 찾았어요.' }); return; }
+  var kb = pick.map(function (x) {
+    var role = E.extrasFor(x.d), ex = '';
+    if (role) { var r = E.ITEMS.filter(function (it) { return it.role === role && missing_(C, it, A.av, A.F).length === 0 && !(((x.d.ing.egg || 0) >= 2) && E.EGGY.indexOf(it.id) >= 0); }); if (r.length) ex = r[0].id; }
+    var names = x.miss.map(function (k) { return E.ING[k][0].replace(/\(.*\)/, ''); });
+    return [{ text: E.shortName(x.d.name) + ' (+' + names.slice(0, 3).join('·') + (names.length > 3 ? ' 외' : '') + ')', callback_data: 'N|' + ctx + '|' + x.d.id + '|' + ex }];
+  });
+  kb.push([{ text: '역시 이미 산 재료로 할래요', callback_data: 'am|' + ctx }]);
+  tg_('sendMessage', { chat_id: C.chat, parse_mode: 'HTML', text: '장을 조금 더 보면 이런 메뉴도 돼요.\n<i>괄호 안이 추가로 살 재료예요. 고르면 살 것 목록을 보내드려요.</i>', reply_markup: { inline_keyboard: kb } });
+}
 function proposeAlt_(C, ctx) {
   if (!ctx) { tg_('sendMessage', { chat_id: C.chat, text: '그날은 아직 식단이 없어요.' }); return; }
   var opts = alternatives_(C, ctx);
@@ -189,7 +241,7 @@ function applyChange_(C, data) {
 
 function help_(C) {
   tg_('sendMessage', {
-    chat_id: C.chat, parse_mode: 'HTML', text: '<b>이렇게 말해보세요</b>\n· 오늘 메뉴 / 내일 메뉴\n· 오늘 메뉴 별로야, 다른 거 먹고 싶어\n· 내일 거 바꿔줘\n· 장보기 목록\n· 이번 주 식단\n\n<a href="' + SITE + '">식단표 전체 보기</a>',
+    chat_id: C.chat, parse_mode: 'HTML', text: '<b>이렇게 말해보세요</b>\n· 오늘 메뉴 / 내일 메뉴\n· 오늘 메뉴 별로야, 다른 거 먹고 싶어 (이미 산 재료로 할지, 장을 더 볼지 물어봐요)\n· 내일 거 바꿔줘\n· 장보기 목록\n· 이번 주 식단\n\n<a href="' + SITE + '">식단표 전체 보기</a>',
     disable_web_page_preview: true,
     reply_markup: { inline_keyboard: [[{ text: '오늘 메뉴', callback_data: 'td|' }, { text: '내일 메뉴', callback_data: 'tm|' }], [{ text: '오늘 메뉴 바꾸기', callback_data: 'alt|' }, { text: '장보기 목록', callback_data: 'sh|' }]] }
   });
@@ -212,7 +264,12 @@ function handleText_(C, text) {
   var tomorrow = /내일/.test(t);
   var day = kst_(tomorrow ? 1 : 0);
   if (/^\/start|^\/help|도움|뭐 ?할 ?수|사용법|명령/.test(t) || t === '') return help_(C);
-  if (/다른|바꿔|바꾸|별로|싫|딴 ?거|말고|질려|안 ?땡|땡기|다른 ?거/.test(t)) return proposeAlt_(C, where_(C, day));
+  if (/다른|바꿔|바꾸|별로|싫|딴 ?거|말고|질려|안 ?땡|땡기|다른 ?거/.test(t)) {
+    var w = where_(C, day);
+    if (/있는 ?재료|산 ?재료|냉장고|사 ?둔|사놓은|산 ?거/.test(t)) return proposeAlt_(C, w);
+    if (/장 ?(더|또)|더 ?사|새로 ?사|사도 ?돼|사러|추가로/.test(t)) return proposeNew_(C, w);
+    return askMode_(C, w);
+  }
   if (/장 ?보|장보기|살 ?거|쇼핑|사야/.test(t)) return shopping_(C);
   if (/이번 ?주|식단표|일주일|주간/.test(t)) return weekly_(C);
   if (/오늘|내일|메뉴|뭐 ?먹|저녁|점심/.test(t)) return sendMenu_(C, where_(C, day), tomorrow ? '<b>[내일 메뉴]</b>\n' : '');
@@ -236,12 +293,22 @@ function doPost(e) {
       if (d === 'td|') return sendMenu_(C, where_(C, kst_(0)), '');
       if (d === 'tm|') return sendMenu_(C, where_(C, kst_(1)), '<b>[내일 메뉴]</b>\n');
       if (d === 'sh|') return shopping_(C);
-      if (d.indexOf('alt|') === 0) return proposeAlt_(C, d.slice(4) || where_(C, kst_(0)));
-      if (d.charAt(0) === 'n' || d.charAt(0) === 's') {
-        var ctx = d.split('|')[1];
+      if (d.indexOf('alt|') === 0) return askMode_(C, d.slice(4) || where_(C, kst_(0)));
+      if (d.indexOf('am|') === 0) return proposeAlt_(C, d.slice(3));
+      if (d.indexOf('an|') === 0) return proposeNew_(C, d.slice(3));
+      if (d.charAt(0) === 'n' || d.charAt(0) === 's' || d.charAt(0) === 'N') {
+        var ctx = d.split('|')[1], buyTxt = '';
+        if (d.charAt(0) === 'N') {
+          var A0 = avail_(C, ctx), it = C.E.byId[d.split('|')[2]], exId = d.split('|')[3];
+          var miss = missing_(C, it, A0.av, A0.F);
+          if (exId) { var rest = {}; for (var k0 in A0.av) rest[k0] = A0.av[k0]; missing_(C, C.E.byId[exId], rest, A0.F).forEach(function (k) { if (miss.indexOf(k) < 0) miss.push(k); }); }
+          buyTxt = '\n<b>추가로 살 것</b>\n' + miss.map(function (k) { return '□ ' + C.E.ING[k][0] + ' ' + C.E.ING[k][4]; }).join('\n') + '\n';
+          d = 'n' + d.slice(1);
+        }
         var r = applyChange_(C, d);
         var C2 = ctx_({ code: code_(), plan: C.plan, sha: '' }); C2.chat = chatId;
         sendMenu_(C2, ctx, '<b>바꿨어요!</b> ' + r.oldName + ' → ' + r.newName + '\n');
+        if (buyTxt) tg_('sendMessage', { chat_id: chatId, parse_mode: 'HTML', text: buyTxt.trim() });
         return;
       }
       return;
