@@ -16,6 +16,7 @@ vm.runInContext(
 
 const plan = JSON.parse(fs.readFileSync('plan.json', 'utf8'));
 const E = ctx.makeEngine(ctx.DATA, () => plan.settings.people);
+(plan.customItems || []).forEach(it => { E.byId[it.id] = it; if (it.vid && it.vinfo) E.VIDS[it.vid] = it.vinfo; });
 const M = ctx.makeMessages(E, plan, SITE);
 
 // 한국 시간 기준 오늘

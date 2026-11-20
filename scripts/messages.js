@@ -54,7 +54,7 @@ function makeMessages(E, plan, SITE) {
     return dishMsg(d, ex, sides, todo, head);
   }
   function dishMsg(d, ex, sides, todo, head) {
-    const caption = head + '<b>오늘의 메뉴는 「' + esc(d.name) + '」입니다</b>\n' + esc(d.desc || '') + '\n\n그림은 예시예요. 국·반찬은 아래 구성대로 차려요.';
+    const caption = head + '<b>오늘의 메뉴는 「' + esc(d.name) + '」입니다</b>\n' + esc(d.desc || '') + '\n\n' + (d.custom ? '사진은 참고 영상 화면이에요.' : '그림은 예시예요. 국·반찬은 아래 구성대로 차려요.');
     const L = [];
     L.push('<b>오늘 한 상</b>');
     L.push('· 메인: ' + esc(d.name));
@@ -71,7 +71,7 @@ function makeMessages(E, plan, SITE) {
     const links = [yt(d.vid, '메인 따라 하기 영상'), d.sid && E.VIDS[d.sid] ? '<a href="https://www.youtube.com/shorts/' + d.sid + '">1분 쇼츠</a>' : '', ex ? yt(ex.vid, esc(ex.name) + ' 영상') : ''].filter(Boolean);
     L.push(links.join(' · '));
     L.push('<a href="' + SITE + '">이번 주 식단표</a>');
-    return { photo: SITE + 'img/' + d.id + '.jpg', caption, text: L.join('\n') };
+    return { photo: d.photo || (SITE + 'img/' + d.id + '.jpg'), caption, text: L.join('\n') };
   }
 
   // 시작 주간(정식 주 시작 전 며칠)
