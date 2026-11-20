@@ -69,6 +69,30 @@ function makeMessages(E, plan, SITE) {
     L.push('<a href="' + SITE + '">이번 주 식단표</a>');
     return { photo: SITE + 'img/' + d.id + '.jpg', caption, text: L.join('\n') };
   }
-  return { weekly, daily };
+
+  // 장보기 목록 (파는 단위, 분류별)
+  function shopping(i) {
+    const rec = plan.weeks[i]; const st = E.simulate(rec);
+    const days = E.days(rec, outday);
+    const use = {}; const total = {}; const P = plan.settings.people / 2;
+    const addUse = (item, label) => { for (const [k, q] of Object.entries(item.ing)) { use[k] = use[k] || []; if (!use[k].includes(label)) use[k].push(label); total[k] = (total[k] || 0) + q * P; } };
+    rec.sides.forEach((id, k) => addUse(byId[id], (k < 2 ? '일' : '수') + ' ' + E.shortName(byId[id].name)));
+    for (const x of days) { if (x.out) continue; const d = byId[x.id]; addUse(d, DAY[x.d] + ' ' + E.shortName(d.name)); if (rec.extras[d.id]) addUse(byId[rec.extras[d.id]], DAY[x.d] + ' ' + E.shortName(byId[rec.extras[d.id]].name)); }
+    const L = ['<b>장보기 목록</b> (' + md(i, 0) + ' ~ ' + md(i, 6) + ', ' + plan.settings.people + '인 기준)', '파는 단위로 적었어요. 남는 양은 다음 주 식단에 먼저 써요.'];
+    let n = 0;
+    for (const cat of E.CAT_ORDER) {
+      const keys = Object.keys(st.buys).filter(k => ING[k][2] === cat); if (!keys.length) continue;
+      L.push(''); L.push('<b>[' + cat + ']</b>');
+      for (const k of keys) { n++; const cnt = st.buys[k]; L.push('□ ' + esc(ING[k][0]) + ' <b>' + esc(ING[k][4]) + (cnt > 1 ? ' × ' + cnt : '') + '</b>  <i>(' + esc(use[k].slice(0, 3).join(', ')) + (use[k].length > 3 ? ' 외' : '') + ')</i>'); }
+    }
+    const fr = Object.keys(st.fromInv);
+    if (fr.length) { L.push(''); L.push('<b>[냉장고에 있는 걸로 쓰는 것]</b>'); L.push(fr.map(k => esc(ING[k][0].replace(/\(.*\)/, '')) + ' ' + E.qtyStr(k, st.fromInv[k])).join(', ')); }
+    const pantry = [...new Set([...rec.mains, ...rec.sides, ...Object.values(rec.extras)].flatMap(id => byId[id].p))].map(k => E.PANTRY[k]);
+    L.push(''); L.push('<b>[양념 확인]</b> 떨어진 것만 사세요'); L.push(esc(pantry.join(', ')));
+    L.push(''); L.push('총 ' + n + '가지 · 김치·김이 집에 있으면 빼세요');
+    L.push('<a href="' + SITE + '">식단표에서 장보기 목록 보기</a>');
+    return L.join('\n');
+  }
+  return { weekly, daily, shopping };
 }
 if (typeof module !== 'undefined') module.exports = { makeMessages };

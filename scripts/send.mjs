@@ -45,13 +45,21 @@ if (MODE === 'weekly') {
   save();
   const label = target === wi ? '이번 주' : '다음 주';
   await tg('sendMessage', { text: M.weekly(target, label), disable_web_page_preview: false });
-  console.log('주간 식단 보냄', target);
+  await tg('sendMessage', { text: M.shopping(target), disable_web_page_preview: true });
+  console.log('주간 식단 + 장보기 목록 보냄', target);
 } else if (MODE === 'daily') {
   if (wi < plan.start) { console.log('아직 시작 전 주예요', wi, plan.start); process.exit(0); }
   E.ensureWeeks(plan.weeks, plan.start, wi, plan.fridge || {});
   save();
   await sendDaily(M.daily(wi, dow));
   console.log('오늘의 메뉴 보냄', wi, dow);
+} else if (MODE === 'shopping') {
+  let target = dow === 0 ? wi : (dow >= 4 ? wi + 1 : wi);
+  target = Math.max(target, plan.start);
+  E.ensureWeeks(plan.weeks, plan.start, target, plan.fridge || {});
+  save();
+  await tg('sendMessage', { text: M.shopping(target), disable_web_page_preview: true });
+  console.log('장보기 목록 보냄', target);
 } else if (MODE === 'sample') {
   // 첫 주 월요일 메뉴를 미리보기로 보냄
   const target = Math.max(wi, plan.start);
