@@ -22,6 +22,7 @@ const M = ctx.makeMessages(E, plan, SITE);
 const now = new Date(Date.now() + 9 * 3600 * 1000);
 const y = now.getUTCFullYear(), m = now.getUTCMonth(), d = now.getUTCDate(), dow = now.getUTCDay();
 const wi = E.weekIndexYMD(y, m, d);
+const ymd = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 
 async function tg(method, body) {
   const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/' + method, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ chat_id: CHAT, parse_mode: 'HTML' }, body)) });
@@ -48,7 +49,11 @@ if (MODE === 'weekly') {
   await tg('sendMessage', { text: M.shopping(target), disable_web_page_preview: true });
   console.log('주간 식단 + 장보기 목록 보냄', target);
 } else if (MODE === 'daily') {
-  if (wi < plan.start) { console.log('아직 시작 전 주예요', wi, plan.start); process.exit(0); }
+  if (wi < plan.start) {
+    const bm = M.bridgeDaily(ymd);
+    if (bm) { await sendDaily(bm); console.log('시작 주간 오늘의 메뉴 보냄', ymd); } else console.log('아직 시작 전 주예요', wi, plan.start);
+    process.exit(0);
+  }
   E.ensureWeeks(plan.weeks, plan.start, wi, plan.fridge || {});
   save();
   await sendDaily(M.daily(wi, dow));
@@ -60,6 +65,10 @@ if (MODE === 'weekly') {
   save();
   await tg('sendMessage', { text: M.shopping(target), disable_web_page_preview: true });
   console.log('장보기 목록 보냄', target);
+} else if (MODE === 'bridge') {
+  await tg('sendMessage', { text: M.bridgeIntro(), disable_web_page_preview: true });
+  const bm = M.bridgeDaily(ymd); if (bm) await sendDaily(bm);
+  console.log('시작 주간 안내 보냄');
 } else if (MODE === 'sample') {
   // 첫 주 월요일 메뉴를 미리보기로 보냄
   const target = Math.max(wi, plan.start);

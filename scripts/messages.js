@@ -50,19 +50,23 @@ function makeMessages(E, plan, SITE) {
     }
     const d = byId[x.id]; const ex = rec.extras[d.id] ? byId[rec.extras[d.id]] : null;
     const sides = E.sidesForDay(rec, x.slot, d.type).map(id => byId[id]);
+    const todo = dow === b2 ? byId[rec.sides[2]] : null;
+    return dishMsg(d, ex, sides, todo, head);
+  }
+  function dishMsg(d, ex, sides, todo, head) {
     const caption = head + '<b>오늘의 메뉴는 「' + esc(d.name) + '」입니다</b>\n' + esc(d.desc || '') + '\n\n그림은 예시예요. 국·반찬은 아래 구성대로 차려요.';
     const L = [];
     L.push('<b>오늘 한 상</b>');
     L.push('· 메인: ' + esc(d.name));
     if (ex) L.push('· ' + (ex.role === 'soup' ? '국' : '곁들이') + ': ' + esc(ex.name) + ' (' + ex.time + '분)');
-    L.push('· 밑반찬: ' + sides.map(s => esc(s.name)).join(', ') + ' (만들어 둔 것)');
+    if (sides.length) L.push('· 밑반찬: ' + sides.map(s => esc(s.name)).join(', ') + ' (만들어 둔 것)');
     L.push('· 김치' + (d.type === 'bowl0' ? '' : ', 김'));
     L.push('');
     L.push('한 상 약 ' + (d.time + (ex ? ex.time : 0)) + '분 · ' + (d.lv === 1 ? '왕초보 OK' : '보통 난이도') + ' · ' + (d.spicy ? '매콤' : '안 매움'));
     L.push('<b>초보 팁</b>: ' + esc(d.tip));
     if (ex) L.push('<b>' + esc(ex.name) + '</b>: ' + esc(ex.tip));
     L.push('<b>두 끼로 나눠 먹으면</b>: ' + esc(d.second));
-    if (dow === b2) { const s2 = byId[rec.sides[2]]; L.push(''); L.push('<b>오늘 할 일</b>: 밑반찬 「' + esc(s2.name) + '」 추가로 만들기 (' + s2.time + '분) ' + yt(s2.vid, '영상')); }
+    if (todo) { L.push(''); L.push('<b>오늘 할 일</b>: 밑반찬 「' + esc(todo.name) + '」 추가로 만들기 (' + todo.time + '분) ' + yt(todo.vid, '영상')); }
     L.push('');
     const links = [yt(d.vid, '메인 따라 하기 영상'), d.sid && E.VIDS[d.sid] ? '<a href="https://www.youtube.com/shorts/' + d.sid + '">1분 쇼츠</a>' : '', ex ? yt(ex.vid, esc(ex.name) + ' 영상') : ''].filter(Boolean);
     L.push(links.join(' · '));
@@ -70,6 +74,24 @@ function makeMessages(E, plan, SITE) {
     return { photo: SITE + 'img/' + d.id + '.jpg', caption, text: L.join('\n') };
   }
 
+  // 시작 주간(정식 주 시작 전 며칠)
+  function bridgeIntro() {
+    const b = plan.bridge; const st = E.newState({}); const use = {};
+    b.days.forEach(x => { [x.main, x.extra].filter(Boolean).forEach(id => { E.consume(st, byId[id]); for (const k of Object.keys(byId[id].ing)) { use[k] = use[k] || []; use[k].push(DAY[x.dow] + ' ' + E.shortName(byId[id].name)); } }); });
+    const L = ['<b>오늘부터 우리집 식단 시작!</b>', '정식 주간 식단은 일요일부터예요. 그 전 ' + b.days.length + '일은 이렇게 먹어요.', ''];
+    b.days.forEach(x => { const d = byId[x.main]; const ex = x.extra ? byId[x.extra] : null; L.push('<b>' + DAY[x.dow] + ' (' + x.date.slice(5).replace('-', '.') + ')</b> ' + esc(d.name) + (ex ? ' + ' + esc(E.shortName(ex.name)) : '') + ' · 김치, 김'); });
+    L.push(''); L.push('<b>오늘 장볼 것</b> (' + b.days.length + '일치, ' + plan.settings.people + '인 기준)');
+    for (const cat of E.CAT_ORDER) { const keys = Object.keys(st.buys).filter(k => ING[k][2] === cat); if (!keys.length) continue; L.push('<b>[' + cat + ']</b>'); keys.forEach(k => L.push('□ ' + esc(ING[k][0]) + ' <b>' + esc(ING[k][4]) + (st.buys[k] > 1 ? ' × ' + st.buys[k] : '') + '</b>  <i>(' + esc([...new Set(use[k])].join(', ')) + ')</i>')); }
+    const pantry = [...new Set(b.days.flatMap(x => [x.main, x.extra].filter(Boolean).flatMap(id => byId[id].p)))].map(k => E.PANTRY[k]);
+    L.push('<b>[양념 확인]</b> ' + esc(pantry.join(', ')));
+    L.push('김치·김은 집에 있는 걸로 (없으면 같이 사기)');
+    L.push(''); L.push('남는 두부·계란·양파·대파 등은 다음 주 식단에 먼저 써서, 일요일 장보기 목록이 그만큼 줄어요.');
+    return L.join('\n');
+  }
+  function bridgeDaily(ymd, head) {
+    const x = (plan.bridge && plan.bridge.days || []).find(y => y.date === ymd); if (!x) return null;
+    return dishMsg(byId[x.main], x.extra ? byId[x.extra] : null, [], null, head || '');
+  }
   // 장보기 목록 (파는 단위, 분류별)
   function shopping(i) {
     const rec = plan.weeks[i]; const st = E.simulate(rec);
@@ -93,6 +115,6 @@ function makeMessages(E, plan, SITE) {
     L.push('<a href="' + SITE + '">식단표에서 장보기 목록 보기</a>');
     return L.join('\n');
   }
-  return { weekly, daily, shopping };
+  return { weekly, daily, shopping, bridgeIntro, bridgeDaily };
 }
 if (typeof module !== 'undefined') module.exports = { makeMessages };
