@@ -85,7 +85,7 @@ function render() {
     const ingAll = [d, ex].filter(Boolean).map(x => esc(shortName(x.name)) + ': ' + Object.entries(x.ing).map(([k, q]) => ING[k][0].replace(/\(.*\)/, '') + ' ' + qtyStr(k, q * people() / 2)).join(', ')).join('<br>');
     const pAll = [...new Set([d, ex].filter(Boolean).flatMap(x => x.p))].map(k => PANTRY[k]).join(', ');
     h += '<div class="card' + (isToday ? ' today' : '') + (isDone ? ' done' : '') + '">' + head +
-      '<img class="photo" loading="lazy" src="img/' + d.id + '.jpg" alt="" onerror="this.remove()">' +
+      '<img class="photo" loading="lazy" src="' + (d.photo || ('img/' + d.id + '.jpg')) + '" alt="" onerror="this.remove()">' +
       '<div class="dish">' + esc(d.name) + '</div>' +
       '<div class="meta"><span>한 상 약 ' + total + '분</span><span>' + (d.lv === 1 ? '왕초보 OK' : '보통') + '</span>' + (d.spicy ? '<span class="hot">매콤</span>' : '<span>안 매움</span>') + '<span>' + d.protein + '</span>' + (fr.length ? '<span class="fr">냉장고 털기: ' + fr.map(k => ING[k][0].replace(/\(.*\)/, '')).join(', ') + '</span>' : '') + '</div>' +
       videoBlock(d.vid, '메인 따라 할 영상') + (links ? '<div class="links">' + links + '</div>' : '') +
@@ -203,6 +203,7 @@ function setup() {
 }
 (async () => {
   if (location.protocol.startsWith('http')) { try { const r = await fetch('plan.json?t=' + Date.now()); if (r.ok) OFFICIAL = await r.json(); } catch (e) { } }
+  if (OFFICIAL && OFFICIAL.customItems) OFFICIAL.customItems.forEach(it => { byId[it.id] = it; if (it.vid && it.vinfo) DATA.VIDS[it.vid] = it.vinfo; });
   setup();
   try { showBridge(); } catch (e) { }
 })();
@@ -211,6 +212,6 @@ function showBridge() {
   const last = b.days[b.days.length - 1].date; const t = new Date(); const ymd = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
   if (ymd > last) return;
   const box = document.createElement('div'); box.className = 'box';
-  box.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">시작 주간 (정식 식단은 일요일부터)</h2>' + b.days.map(x => { const d = byId[x.main]; const ex = x.extra ? byId[x.extra] : null; return '<div style="display:flex;gap:10px;align-items:center;margin:8px 0' + (x.date === ymd ? ';font-weight:700' : '') + '"><img src="img/' + d.id + '.jpg" style="width:96px;height:72px;object-fit:cover;border-radius:10px"><div>' + DAY[x.dow] + '요일 ' + x.date.slice(5).replace('-', '.') + (x.date === ymd ? ' <span class="todaytag">오늘</span>' : '') + '<br>' + esc(d.name) + (ex ? ' + ' + esc(ex.name) : '') + ' · 김치, 김<br>' + ytLink(d.vid, '메인 영상') + (ex ? ' · ' + ytLink(ex.vid, esc(shortName(ex.name)) + ' 영상') : '') + '</div></div>'; }).join('');
+  box.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">시작 주간 (정식 식단은 일요일부터)</h2>' + b.days.map(x => { const d = byId[x.main]; const ex = x.extra ? byId[x.extra] : null; return '<div style="display:flex;gap:10px;align-items:center;margin:8px 0' + (x.date === ymd ? ';font-weight:700' : '') + '"><img src="' + (d.photo || ('img/' + d.id + '.jpg')) + '" style="width:96px;height:72px;object-fit:cover;border-radius:10px"><div>' + DAY[x.dow] + '요일 ' + x.date.slice(5).replace('-', '.') + (x.date === ymd ? ' <span class="todaytag">오늘</span>' : '') + '<br>' + esc(d.name) + (ex ? ' + ' + esc(ex.name) : '') + ' · 김치, 김<br>' + ytLink(d.vid, '메인 영상') + (ex ? ' · ' + ytLink(ex.vid, esc(shortName(ex.name)) + ' 영상') : '') + '</div></div>'; }).join('');
   const s = document.getElementById('summary'); s.parentNode.insertBefore(box, s);
 }
