@@ -35,8 +35,33 @@
     "eomukbokkeum",
     "oimuchim"
    ],
-   "inv": {},
+   "inv": {
+    "zucchini": 0.5,
+    "potato": 4,
+    "onion": 1.5,
+    "greenonion": 1.7,
+    "chili": 8,
+    "egg": 12,
+    "lettuce": 50,
+    "miyeok": 40
+   },
    "v": 2
   }
+ },
+ "bridge": {
+  "days": [
+   {
+    "date": "2026-11-20",
+    "dow": 5,
+    "main": "doenjang",
+    "extra": "gyeranjjim"
+   },
+   {
+    "date": "2026-11-21",
+    "dow": 6,
+    "main": "jeyuk",
+    "extra": "miyeokguk"
+   }
+  ]
  }
 }
