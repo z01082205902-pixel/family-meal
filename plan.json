@@ -1,0 +1,42 @@
+{
+ "settings": {
+  "people": 2,
+  "outday": 0
+ },
+ "start": 46,
+ "fridge": {},
+ "weeks": {
+  "46": {
+   "mains": [
+    "teriyaki",
+    "muguk",
+    "chamchikimchi",
+    "dongtae",
+    "bibimguksu",
+    "eggfriedrice"
+   ],
+   "slotOf": {
+    "teriyaki": "A",
+    "chamchikimchi": "B",
+    "dongtae": "C",
+    "muguk": "D",
+    "bibimguksu": "E",
+    "eggfriedrice": "F"
+   },
+   "extras": {
+    "teriyaki": "eomukguk",
+    "chamchikimchi": "dububuchim",
+    "dongtae": "spamyangpa",
+    "muguk": "hobakjeon",
+    "eggfriedrice": "doenjangguk"
+   },
+   "sides": [
+    "musaengchae",
+    "eomukbokkeum",
+    "oimuchim"
+   ],
+   "inv": {},
+   "v": 2
+  }
+ }
+}

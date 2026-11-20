@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="우리집 주간 식단표">
+<meta property="og:description" content="이번 주 한 상 차림과 장보기 목록">
+<title>우리집 주간 식단표</title>
+<style>
+:root{--bg:#f7f3ec;--card:#fff;--ink:#2b2622;--sub:#7a6f66;--line:#e8e0d4;--acc:#3f7d5a;--acc2:#e9f3ec;--warn:#c4552d;--chip:#f1ebe2;--gold:#a8742a;--gold2:#fbf3e4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.55}
+a{color:var(--acc)}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 80px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+h1{font-size:26px;margin:0 0 4px}
+.range{color:var(--sub);font-size:15px}
+.badge{display:inline-block;background:var(--acc2);color:var(--acc);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls label{font-size:13px;color:var(--sub)}
+select,button,input[type=number]{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;color:var(--ink)}
+button{cursor:pointer}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+button.ghost{background:transparent}
+.tabs{display:flex;gap:6px;margin:6px 0 16px;flex-wrap:wrap}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:16px}
+details.guide summary{cursor:pointer;font-weight:700}
+details.guide ol{margin:8px 0 0;padding-left:20px;font-size:14px}
+details.guide li{margin:4px 0}
+.fridge h2,.shop h2{margin:0 0 4px;font-size:20px}
+.note{color:var(--sub);font-size:13.5px;margin:0 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--gold2);border:1px solid #efdcb9;border-radius:999px;padding:4px 6px 4px 12px;font-size:13.5px}
+.chip b{color:var(--gold)}
+.chip button{border:none;background:#fff;border-radius:999px;padding:1px 8px;font-size:13px;line-height:1.5}
+.addrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.addrow select{max-width:240px}
+.addrow input{width:90px}
+.empty{color:var(--sub);font-size:14px}
+.summary{font-size:14px}
+.summary b{color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.card.today{border:2px solid var(--acc);box-shadow:0 4px 14px rgba(63,125,90,.15)}
+.card.done .dish,.card.done .table .nm{text-decoration:line-through;color:var(--sub)}
+.photo{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#eee}
+.editnote{display:none;background:#fbe6dd;color:var(--warn);border-radius:12px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+.card.done .thumb img{filter:grayscale(1);opacity:.6}
+.chead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 4px}
+.day{font-weight:800;font-size:16px}
+.day small{font-weight:500;color:var(--sub);margin-left:4px}
+.slot{font-size:12px;background:var(--chip);border-radius:999px;padding:2px 9px;color:var(--sub)}
+.todaytag{font-size:12px;background:var(--acc);color:#fff;border-radius:999px;padding:2px 9px;margin-left:6px}
+.dish{font-size:20px;font-weight:800;padding:0 14px}
+.meta{padding:4px 14px 6px;display:flex;gap:6px;flex-wrap:wrap}
+.meta span{font-size:12px;background:var(--chip);border-radius:8px;padding:2px 8px}
+.meta .hot{background:#fbe6dd;color:var(--warn)}
+.meta .fr{background:var(--gold2);color:var(--gold);font-weight:700}
+.thumb{display:flex;gap:10px;padding:6px 14px;text-decoration:none;color:inherit;align-items:center}
+.thumb img{width:132px;height:74px;object-fit:cover;border-radius:10px;flex:none;background:#ddd}
+.thumb .vt{font-size:13px;line-height:1.4}
+.thumb .vt b{display:block;font-size:12px;color:var(--acc);margin-bottom:2px}
+.thumb .vt em{display:block;font-style:normal;color:var(--sub);font-size:12px;margin-top:2px}
+.links{padding:0 14px 6px;display:flex;flex-wrap:wrap;gap:6px}
+.links a{font-size:12.5px;text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:3px 9px;background:#fffdf9}
+.table{margin:6px 14px 4px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.table .tt{background:var(--acc2);color:var(--acc);font-weight:800;font-size:13px;padding:6px 10px}
+.trow{display:flex;gap:8px;padding:6px 10px;border-top:1px solid #f2ece3;font-size:13.5px;align-items:baseline}
+.trow .lb{flex:none;width:58px;font-size:12px;font-weight:700;color:var(--sub)}
+.trow .nm{flex:1}
+.trow a{font-size:12px;margin-left:4px;white-space:nowrap}
+.trow .mk{font-size:11.5px;color:var(--gold);margin-left:4px}
+.batch{margin:8px 14px 4px;background:var(--gold2);border:1px dashed #e3c995;border-radius:12px;padding:8px 10px;font-size:13.5px}
+.batch b{color:var(--gold)}
+.batch a{font-size:12px}
+.info{padding:4px 14px 8px;font-size:13.5px}
+.info p{margin:5px 0}
+.info .k{display:block;font-weight:700;color:var(--sub);font-size:12px}
+details.ings{padding:0 14px 10px;font-size:13px;color:var(--sub)}
+details.ings summary{cursor:pointer}
+.cfoot{margin-top:auto;display:flex;gap:6px;padding:10px 14px 14px;border-top:1px dashed var(--line)}
+.cfoot button{flex:1;font-size:13px;padding:7px 8px}
+.card.out{background:#fffaf2}
+.out ul{margin:6px 0 0;padding-left:18px;font-size:14px}
+.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px 22px}
+.cat h3{font-size:15px;margin:10px 0 6px;color:var(--acc)}
+.item{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f2ece3;font-size:14px}
+.item .nm{flex:1}
+.item .q{font-weight:800;white-space:nowrap;text-align:right}
+.item .q small{display:block;font-weight:500;color:var(--sub);font-size:11.5px}
+.item .use{display:block;font-size:12px;color:var(--sub)}
+.item button{font-size:12px;padding:3px 8px;white-space:nowrap}
+.sub3{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px}
+.sub3 .mini{background:#fcfaf6;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px}
+.sub3 .mini h4{margin:0 0 6px;font-size:14px}
+.sub3 .mini ul{margin:0;padding-left:18px}
+.pantry,.light{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pantry button{font-size:12.5px;padding:4px 10px;border-radius:999px}
+.pantry button.outp{background:#fbe6dd;border-color:#f1c2ad;color:var(--warn);font-weight:700}
+.light label{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;background:#fff}
+.order{margin-top:18px;background:var(--acc2);border-radius:14px;padding:14px}
+.order h3{margin:0 0 6px;font-size:16px}
+.order ol{margin:0 0 10px;padding-left:20px;font-size:14px}
+textarea{width:100%;min-height:160px;border:1px solid var(--line);border-radius:10px;padding:10px;font:13px/1.5 inherit;background:#fff;color:var(--ink);margin-top:10px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+footer{margin-top:22px;font-size:12px;color:var(--sub)}
+@media (max-width:480px){h1{font-size:22px}.grid{grid-template-columns:1fr}.thumb img{width:112px;height:63px}}
+@media print{.controls,.tabs,.cfoot,.order,details.guide,.addrow{display:none}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>우리집 주간 식단표 <span class="badge">매주 일요일 자동 새로고침</span></h1>
+      <div class="range" id="range"></div>
+    </div>
+    <div class="controls">
+      <label>인원 <select id="people"><option value="1">1인</option><option value="2">2인</option><option value="3">3인</option><option value="4">4인</option></select></label>
+      <label>외식·배달 요일 <select id="outday"></select></label>
+    </div>
+  </header>
+  <div class="tabs">
+    <button id="prevW">지난 주</button>
+    <button id="thisW">이번 주</button>
+    <button id="nextW">다음 주 미리보기</button>
+    <button id="printB" class="ghost">인쇄</button>
+  </div>
+
+  <details class="guide box">
+    <summary>이 식단표가 짜이는 원칙 (집밥 연진이 「식단짜기」 영상 + 우리집 조건)</summary>
+    <ol>
+      <li><b>한 끼를 한 상으로.</b> 영상 속 상차림처럼 「메인 + 국이나 찌개 + 밑반찬 2가지 + 김치」로 차려요. 메인이 볶음·구이면 빠른 국(10분)을, 메인이 찌개면 계란말이·두부부침 같은 곁들이를 붙였어요. 덮밥·면 같은 한 그릇 날은 가볍게 반찬 1가지예요.</li>
+      <li><b>밑반찬은 매일 안 만들어요.</b> 일요일에 오래가는 반찬 2가지, 수요일에 금방 하는 반찬 1가지를 만들어 돌려 먹어요.</li>
+      <li><b>냉장고 털기가 1순위.</b> 냉장고에 있는 재료, 지난주에 남은 재료를 먼저 쓰는 메뉴부터 골라요. 상하기 쉬운 숙주·콩나물·쌈채소·생연어가 들어간 메뉴는 주 초반에 배치해요.</li>
+      <li><b>살 때 남는 양까지 계산해요.</b> 대파 1단, 무 1개처럼 파는 단위로 장보기 목록을 만들고, 남는 양은 같은 주 반찬·국이나 다음 주 식단에 먼저 넣어요.</li>
+      <li><b>단백질 퐁당퐁당.</b> 고기 → 두부·계란·어묵 → 해산물 → 고기 국물 → 별미 한 그릇 → 냉장고 털기. 돼지고기 주 2회, 면·떡 주 1회, 매운 요리 주 3회까지예요.</li>
+      <li><b>순서는 자유, 먹은 건 줄 긋기.</b> 영상 팁처럼 요일은 대략적인 순서예요. 다 먹은 날은 「먹었어요」를 눌러요.</li>
+      <li><b>일주일에 하루는 외식·배달.</b> 배달앱 켜기 전에 후보 중에서 미리 정해두면 고민 시간과 돈이 줄어요.</li>
+    </ol>
+  </details>
+
+  <section class="box fridge">
+    <h2>우리집 냉장고 <span id="fridgeWeek" style="font-size:13px;color:var(--sub);font-weight:500"></span></h2>
+    <p class="note" id="fridgeNote"></p>
+    <div class="chips" id="fridgeChips"></div>
+    <div class="addrow" id="addrow">
+      <select id="addSel"></select>
+      <input type="number" id="addQty" min="0" step="any" placeholder="양">
+      <span id="addUnit" style="font-size:13px;color:var(--sub)"></span>
+      <button id="addB">냉장고에 추가</button>
+      <button id="replanB" class="primary">냉장고 기준으로 식단 다시 짜기</button>
+    </div>
+  </section>
+
+  <div class="editnote" id="editNote">이 주 식단을 이 기기에서 바꿨어요. 텔레그램 알림은 원래 식단 기준으로 와요. <button id="resetB">원래 식단으로</button></div>
+  <div class="box summary" id="summary"></div>
+  <div class="grid" id="grid"></div>
+
+  <section class="box shop" style="margin-top:22px">
+    <h2>장보기 목록 (파는 단위 기준)</h2>
+    <p class="note" id="shopnote"></p>
+    <div class="cols" id="shoplist"></div>
+    <div class="sub3">
+      <div class="mini"><h4>냉장고에서 꺼내 쓰는 것 (먼저 털기)</h4><div id="fromFridge"></div></div>
+      <div class="mini"><h4>이번 주 끝나고 남을 재료 (다음 주 식단에 먼저 써요)</h4><div id="leftover"></div></div>
+    </div>
+    <div class="cat">
+      <h3>기본 양념 (집에 있다고 가정했어요, 떨어진 것만 눌러주세요)</h3>
+      <div class="pantry" id="pantry"></div>
+    </div>
+    <div class="cat">
+      <h3>가벼운 한 끼용 (선택, 간식도 밥이다)</h3>
+      <div class="light" id="light"></div>
+    </div>
+    <div class="order">
+      <h3>장보기 진행 방법</h3>
+      <ol>
+        <li>집에 이미 있는 재료는 「집에 있어요」를 눌러 냉장고로 옮겨주세요.</li>
+        <li>「목록 복사」를 누르고 Aside 채팅에 붙여넣으세요.</li>
+        <li>Aside가 먼저 <b>직접 장볼지, 인터넷(쿠팡)으로 주문할지</b> 물어봐요.</li>
+        <li>인터넷 주문이면 가격·성분·후기를 비교해 장바구니에 담고, 결제 전 검수표를 보여드려요. 승인하시면 그때 결제해요.</li>
+      </ol>
+      <button class="primary" id="copyB">목록 복사 (Aside에 붙여넣기)</button>
+      <textarea id="copyText" readonly></textarea>
+    </div>
+  </section>
+  <footer>영상은 집밥 연진이 영상에서 추천한 채널(백종원, 어남선생 류수영, 김대석 셰프TV, 이 남자의 cook, JUNTV)의 조회수 높은 영상과 반응 좋은 1분 쇼츠로 골랐어요(조회수는 2026년 11월 기준). 냉장고·체크 내용은 이 브라우저에 저장돼요. 장본 뒤 남는 양은 계획대로 먹었다고 보고 자동 계산하니, 실제와 다르면 냉장고 칸에서 고쳐주세요.</footer>
+</div>
+<div class="toast" id="toast"></div>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
