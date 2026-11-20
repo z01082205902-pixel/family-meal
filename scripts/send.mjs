@@ -30,12 +30,13 @@ async function tg(method, body) {
   if (!j.ok) throw new Error(method + ' 실패: ' + JSON.stringify(j));
   return j;
 }
-async function sendDaily(msg) {
+async function sendDaily(msg, ctx) {
   if (msg.photo) {
     try { await tg('sendPhoto', { photo: msg.photo, caption: msg.caption }); }
     catch (e) { console.error(e.message); await tg('sendMessage', { text: msg.caption, disable_web_page_preview: true }); }
   }
-  await tg('sendMessage', { text: msg.text, disable_web_page_preview: true });
+  const extra = ctx ? { reply_markup: { inline_keyboard: [[{ text: '다른 메뉴로 바꾸기', callback_data: 'alt|' + ctx }], [{ text: '내일 메뉴 보기', callback_data: 'tm|' }, { text: '장보기 목록', callback_data: 'sh|' }]] } } : {};
+  await tg('sendMessage', Object.assign({ text: msg.text, disable_web_page_preview: true }, extra));
 }
 function save() { fs.writeFileSync('plan.json', JSON.stringify(plan, null, 1) + '\n'); }
 
@@ -51,12 +52,12 @@ if (MODE === 'weekly') {
 } else if (MODE === 'daily') {
   if (wi < plan.start) {
     const bm = M.bridgeDaily(ymd);
-    if (bm) { await sendDaily(bm); console.log('시작 주간 오늘의 메뉴 보냄', ymd); } else console.log('아직 시작 전 주예요', wi, plan.start);
+    if (bm) { await sendDaily(bm, 'b' + ymd); console.log('시작 주간 오늘의 메뉴 보냄', ymd); } else console.log('아직 시작 전 주예요', wi, plan.start);
     process.exit(0);
   }
   E.ensureWeeks(plan.weeks, plan.start, wi, plan.fridge || {});
   save();
-  await sendDaily(M.daily(wi, dow));
+  const dm = M.daily(wi, dow); await sendDaily(dm, dm.photo ? wi + '.' + dow : null);
   console.log('오늘의 메뉴 보냄', wi, dow);
 } else if (MODE === 'shopping') {
   let target = dow === 0 ? wi : (dow >= 4 ? wi + 1 : wi);

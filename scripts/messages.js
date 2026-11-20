@@ -115,6 +115,6 @@ function makeMessages(E, plan, SITE) {
     L.push('<a href="' + SITE + '">식단표에서 장보기 목록 보기</a>');
     return L.join('\n');
   }
-  return { weekly, daily, shopping, bridgeIntro, bridgeDaily };
+  return { weekly, daily, shopping, bridgeIntro, bridgeDaily, dishMsg };
 }
 if (typeof module !== 'undefined') module.exports = { makeMessages };
