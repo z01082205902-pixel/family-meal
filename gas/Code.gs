@@ -272,12 +272,17 @@ function findDish_(C, name) {
 }
 function yt_(q) {
   try {
-    var html = UrlFetchApp.fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(q) + '&hl=ko&gl=KR', { headers: { 'Accept-Language': 'ko-KR,ko' }, muteHttpExceptions: true }).getContentText();
-    var m = html.match(/"videoRenderer":\{"videoId":"([\w-]{11})"[\s\S]{0,1500}?"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/);
-    if (!m) return null;
-    var after = html.slice(m.index, m.index + 6000);
-    var ch = after.match(/"ownerText":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/);
-    return { vid: m[1], t: JSON.parse('"' + m[2] + '"'), ch: ch ? JSON.parse('"' + ch[1] + '"') : '' };
+    var html = UrlFetchApp.fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(q) + '&hl=ko&gl=KR&persist_hl=1&persist_gl=1', {
+      headers: { 'Accept-Language': 'ko-KR,ko;q=0.9', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36', 'Cookie': 'CONSENT=YES+cb; SOCS=CAI' },
+      muteHttpExceptions: true, followRedirects: true }).getContentText();
+    var i = html.indexOf('"videoRenderer":{"videoId":"');
+    if (i < 0) i = html.indexOf('"videoId":"');
+    if (i < 0) return null;
+    var vid = html.slice(i).match(/"videoId":"([\w-]{11})"/)[1];
+    var seg = html.slice(i, i + 8000);
+    var tm = seg.match(/"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/) || seg.match(/"title":\{"simpleText":"((?:[^"\\]|\\.)*)"/);
+    var ch = seg.match(/"ownerText":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/);
+    return { vid: vid, t: tm ? JSON.parse('"' + tm[1] + '"') : q, ch: ch ? JSON.parse('"' + ch[1] + '"') : '' };
   } catch (e) { return null; }
 }
 function makeCustom_(C, name) {
@@ -425,7 +430,10 @@ function doPost(e) {
   }
 }
 
-function doGet() { return ContentService.createTextOutput('ok'); }
+function doGet(e) {
+  if (e && e.parameter && e.parameter.yt) return ContentService.createTextOutput(JSON.stringify(yt_(e.parameter.yt)));
+  return ContentService.createTextOutput('ok');
+}
 
 // 편집기에서 한 번 실행: 텔레그램 웹훅 연결 (WEBAPP_URL 속성 필요)
 function setWebhook() {
