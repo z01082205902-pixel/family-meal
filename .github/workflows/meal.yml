@@ -1,0 +1,46 @@
+name: 식단 알림
+
+on:
+  schedule:
+    - cron: '0 23 * * 6'   # 일요일 08:00 (한국 시간) 주간 식단표
+    - cron: '0 1 * * *'    # 매일 10:00 (한국 시간) 오늘의 메뉴
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'weekly(주간표) / daily(오늘 메뉴) / sample(미리보기)'
+        required: true
+        default: 'weekly'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meal
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 텔레그램 보내기
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then MODE="$INPUT_MODE";
+          elif [ "$SCHEDULE" = "0 23 * * 6" ]; then MODE=weekly;
+          else MODE=daily; fi
+          node scripts/send.mjs "$MODE"
+      - name: 식단 기록 저장
+        run: |
+          git config user.name "meal-bot"
+          git config user.email "meal-bot@users.noreply.github.com"
+          git add plan.json
+          git diff --cached --quiet || (git commit -m "식단 기록 업데이트" && git push)
